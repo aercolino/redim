@@ -6,6 +6,7 @@ import { glob } from 'glob';
 import path from 'node:path';
 import cliProgress from 'cli-progress';
 import winston from 'winston';
+import sharp from 'sharp';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -53,26 +54,33 @@ const images = await glob([sourceGlob]);
 
 console.log(`Found ${images.length} images to process.`);
 
-const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-bar1.start(images.length, 0);
+const progress = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+progress.start(images.length, 0);
 
 let count = 0;
 for (const image of images) {
   const relativePath = path.relative(source, image);
   const destPath = path.join(dest, relativePath);
-  logger.info(`Processing image: ${image}`);
-  bar1.update({ filename: relativePath });
-
-  await fs.ensureDir(path.dirname(destPath));
-
   try {
+    logger.info(`Processing image: ${image}`);
+    progress.update({ filename: relativePath });
+
+    await fs.ensureDir(path.dirname(destPath));
     await fs.copyFile(image, destPath);
     logger.info(`Copied to ${destPath}`);
 
+    const resizedPath = path.join(path.dirname(destPath), `resized-${path.basename(destPath)}`);
+    await sharp(destPath)
+      .resize({ width: 800, height: 600, fit: 'inside' })
+      .toFile(resizedPath);
+    logger.info(`Resized image saved to ${resizedPath}`);
+
+    fs.renameSync(resizedPath, destPath);
+    logger.info(`Final image saved to ${destPath}`);
   } catch (error) {
     logger.error(`Error copying to ${destPath}:`, error);
   } finally {
-    bar1.increment();
+    progress.increment();
   }
   count += 1;
   if (count === 10) {
@@ -80,7 +88,7 @@ for (const image of images) {
   }
 }
 
-bar1.stop();
+progress.stop();
 console.log('Exiting gracefully...');
 logger.info('Exiting gracefully...');
 process.removeAllListeners();
