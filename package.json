@@ -5,7 +5,6 @@
   "license": "ISC",
   "author": "Andrea Ercolino",
   "type": "module",
-  "main": "index.js",
   "devDependencies": {
     "@eslint/js": "^9.27.0",
     "eslint": "^9.27.0",
