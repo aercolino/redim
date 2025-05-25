@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Usage: node redim.js --fromRootDir <dir> --toRootDir <dir> --ext <ext>
 import { program } from 'commander';
 import fs from 'fs-extra';
