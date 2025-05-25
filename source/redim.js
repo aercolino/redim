@@ -89,7 +89,8 @@ for (const image of images) {
       .resize({ width: 1200, height: 1200, fit: 'inside' })
       .toFile(resizedPath);
     logger.info(`Resized image saved to ${resizedPath}`);
-
+    
+    fs.unlinkSync(destPath);
     fs.renameSync(resizedPath, destPath);
     logger.info(`Final image saved to ${destPath}`);
   } catch (error) {
