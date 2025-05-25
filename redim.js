@@ -95,7 +95,7 @@ for (const image of images) {
     fs.renameSync(resizedPath, destPath);
     logger.info(`Final image saved to ${destPath}`);
   } catch (error) {
-    logger.error(`Error copying to ${destPath}:`, error);
+    logger.error(`Error for ${destPath}:`, error);
   } finally {
     progress.increment();
   }
