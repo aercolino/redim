@@ -7,6 +7,7 @@ import path from 'node:path';
 import cliProgress from 'cli-progress';
 import winston from 'winston';
 import sharp from 'sharp';
+import prompts from 'prompts';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -32,19 +33,22 @@ process.on('unhandledRejection', (reason, promise) => {
 
 program
   .requiredOption('--fromRootDir "<dir>"', 'Directory to read files from')
-  .requiredOption('--toRootDir "<dir>"', 'Directory to write files to');
+  .requiredOption('--toRootDir "<dir>"', 'Directory to write files to')
+  .option('--test', 'Run in test mode, processing only 10 images');
 
 program.parse();
 const options = program.opts();
 
 const source = path.resolve(options.fromRootDir);
 if (!fs.pathExistsSync(source)) {
+  logger.error(`Source directory does not exist: ${source}`);
   console.error(`Source directory does not exist: ${source}`);
   process.exit(1);
 }
 
 const dest = path.resolve(options.toRootDir);
 if (!fs.pathExistsSync(dest)) {
+  logger.error(`Destination directory does not exist: ${dest}`);
   console.error(`Destination directory does not exist: ${dest}`);
   process.exit(1);
 }
@@ -52,7 +56,18 @@ if (!fs.pathExistsSync(dest)) {
 const sourceGlob = path.join(source, '/**/*.{jpg,jpeg,png,gif,webp,svg}');
 const images = await glob([sourceGlob]);
 
-console.log(`Found ${images.length} images to process.`);
+const proceed = await prompts({
+  type: 'confirm',
+  name: 'value',
+  message: `Are you sure you want to process ${images.length} images?`,
+  initial: true
+});
+if (!proceed.value) {
+  logger.info('Operation cancelled by user.');
+  console.log('Operation cancelled by user.');
+  process.exit(0);
+}
+logger.info(`Processing ${images.length} images from ${source} to ${dest}`);
 
 const progress = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 progress.start(images.length, 0);
@@ -71,7 +86,7 @@ for (const image of images) {
 
     const resizedPath = path.join(path.dirname(destPath), `resized-${path.basename(destPath)}`);
     await sharp(destPath)
-      .resize({ width: 800, height: 600, fit: 'inside' })
+      .resize({ width: 1200, height: 1200, fit: 'inside' })
       .toFile(resizedPath);
     logger.info(`Resized image saved to ${resizedPath}`);
 
@@ -83,7 +98,7 @@ for (const image of images) {
     progress.increment();
   }
   count += 1;
-  if (count === 10) {
+  if (options.test && count === 10) {
     break;
   }
 }
